@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import {Application, Request, Response, NextFunction, Errback} from "express";
 
 (async () => {
 
@@ -29,34 +30,19 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
   /**************************************************************************** */
 
-  app.get( "/filteredimage/", async ( req, res ) => {
-    let { image_url } = req.query;
-    let validUrl = require('valid-url');
 
-    if ( !image_url ) {
-      return res.status(400)
-                .send(`image url is required`);
+  app.get("/filteredimage",
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            let absolutePath: string = await filterImageFromURL(req.query.image_url) as string;
+            return res.status(200).sendFile(absolutePath,function () {
+              deleteLocalFiles([absolutePath]);
+            });
+        } catch (e) {
+            return next(e);
+        }
     }
-
-    if (validUrl.isUri(image_url)){
-
-      console.log(validUrl.isUri(image_url));
-      const filterImage = await filterImageFromURL(image_url);
-      return res.status(200)
-      .sendFile(`${filterImage}`,function () {
-        deleteLocalFiles([`${filterImage}`]);
-      });
-    }else{
-      return res.status(400)
-                .send(`Looks like the url is not valid.`);
-      
-    }
-    
-    
-    
-
-    
-  } );
+  );
 
 
   // Root Endpoint
